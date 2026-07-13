@@ -18,6 +18,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # actions/checkout runs `git clean -ffdx` before every checkout, which
+      # wipes any untracked file in the workspace — including .env. Real
+      # secrets are kept one level up, outside the workspace entirely
+      # (~/deploy-secrets/print-buddy-infra.env, seeded once by hand), and
+      # restored here on every run instead of living in the repo.
+      - name: Restore .env
+        run: cp ~/deploy-secrets/print-buddy-infra.env .env
+
       # No login step: backend/bot/frontend's images are public (matching
       # their already-public source repos), so anonymous pull works and
       # there's no cross-repo token-permission question to solve. If any

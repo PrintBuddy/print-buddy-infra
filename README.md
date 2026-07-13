@@ -18,12 +18,16 @@ This repo does **not** need to sit next to the app repos anymore — it's self-c
 
 ## Setup (one-time, per host)
 
+The automated `Deploy` workflow runs in a GitHub-managed workspace that gets wiped clean (`git clean -ffdx`) on every checkout, so `.env` can't live inside it — it's kept one level up and restored into the workspace at the start of every run:
+
 ```bash
-cp .env.example .env
+mkdir -p ~/deploy-secrets && chmod 700 ~/deploy-secrets
+cp .env.example ~/deploy-secrets/print-buddy-infra.env
 # fill in every value — see .env.example for what each one is for
-docker compose pull
-docker compose up -d
+chmod 600 ~/deploy-secrets/print-buddy-infra.env
 ```
+
+For a manual/local run (not through the runner), just `cp` that same file to `.env` in whatever directory you're running `docker compose`/`deploy.sh` from.
 
 ## Normal operation
 
