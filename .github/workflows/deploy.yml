@@ -1,0 +1,34 @@
+name: Deploy
+
+on:
+  schedule:
+    # Every 5 minutes. docker compose pull is cheap when nothing changed —
+    # this is the "VM checks in" side of the pull-based model, since the
+    # VM has no inbound access for GitHub to push a deploy to it directly.
+    - cron: "*/5 * * * *"
+  # Lets you trigger an immediate deploy by hand from the Actions tab,
+  # instead of waiting for the next scheduled tick.
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      # No login step: backend/bot/frontend's images are public (matching
+      # their already-public source repos), so anonymous pull works and
+      # there's no cross-repo token-permission question to solve. If any
+      # of them ever become private packages, add a docker/login-action
+      # step here using a PAT with read:packages scope (the automatic
+      # GITHUB_TOKEN in *this* repo's workflow can't read packages owned
+      # by the other three repos).
+      - name: Pull latest images and (re)start any that changed
+        run: |
+          docker compose pull
+          docker compose up -d
+
+      - name: Clean up dangling images
+        run: docker image prune -f

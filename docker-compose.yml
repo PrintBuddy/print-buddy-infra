@@ -1,6 +1,6 @@
 services:
   backend:
-    build: ../backend
+    image: ghcr.io/printbuddy/print-buddy-backend:${BACKEND_TAG:-latest}
     container_name: backend
     env_file:
       - .env
@@ -9,9 +9,6 @@ services:
     volumes:
       - "${CUPS_HOST}:${CUPS_HOST}"
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
@@ -19,14 +16,8 @@ services:
       retries: 3
       start_period: 10s
 
-
   frontend:
-    build:
-      context: ../frontend/app
-      args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
-        VITE_CONTACT_NAME: ${VITE_CONTACT_NAME}
-        VITE_CONTACT_NUMBER: ${VITE_CONTACT_NUMBER}
+    image: ghcr.io/printbuddy/print-buddy-frontend:${FRONTEND_TAG:-latest}
     container_name: frontend
     env_file:
       - .env
@@ -37,9 +28,8 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-
   bot:
-    build: ../bot
+    image: ghcr.io/printbuddy/print-bot:${BOT_TAG:-latest}
     container_name: bot
     env_file:
       - .env
@@ -48,24 +38,12 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  postgres:
-    image: postgres:17
-    container_name: postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "127.0.0.1:5432:5432"
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-
-volumes:
-  pg_data:
+networks:
+  default:
+    # Postgres runs as its own long-lived container, managed separately
+    # (see README — "Why Postgres isn't in this file"). This stack joins
+    # its existing network rather than defining a postgres service of its
+    # own, so DB_HOSTNAME=postgres in .env resolves correctly without this
+    # compose project ever touching the database container or its volume.
+    name: print-buddy-app_default
+    external: true

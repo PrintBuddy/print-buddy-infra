@@ -1,33 +1,27 @@
 #!/bin/bash
+#
+# Manual/emergency deploy — the normal path is the "Deploy" GitHub Actions
+# workflow running automatically on the self-hosted runner every 5 minutes.
+# Use this script when you want to force a deploy right now without
+# waiting for the schedule, or if GitHub Actions itself is unreachable.
 
 set -euo pipefail
 
-# This script lives in print-buddy-infra/, alongside docker-compose.yml
-# and .env. backend/, bot/, and frontend/ are expected as sibling
-# directories one level up (the layout docker-compose.yml's build
-# contexts — ../backend, ../bot, ../frontend/app — already assume).
 INFRA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APPS_DIR="$(cd "$INFRA_DIR/.." && pwd)"
 SERVICES=("frontend" "backend" "bot")
 
-# --- Default Values ---
 SERVICE="all"
-FROM_CLEAN=false
 BUMP_TYPE=""
 
-# --- Help Function ---
 show_help() {
     echo "Usage: ./deploy.sh [OPTIONS]"
     echo ""
     echo "Options:"
     echo "  -s, --service [name]    Service to deploy (frontend, backend, bot, all). Default: all"
     echo "  -b, --bump [type]       Version bump type (major, minor, fix)."
-    echo "  -c, --clean             Perform a clean build using --no-cache."
     echo "  -h, --help              Show this help message."
 }
 
-
-# --- Parse Arguments ---
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -s|--service)
@@ -37,10 +31,6 @@ while [[ $# -gt 0 ]]; do
         -b|--bump)
             BUMP_TYPE="$2"
             shift 2
-            ;;
-        -c|--clean)
-            FROM_CLEAN=true
-            shift
             ;;
         -h|--help)
             show_help
@@ -81,36 +71,18 @@ if [[ -n "$BUMP_TYPE" ]]; then
     fi
 fi
 
-# --- 2. Update Repositories ---
-for service_name in "${SERVICES[@]}"; do
-    if [[ "$SERVICE" == "all" || "$SERVICE" == "$service_name" ]]; then
-        echo "→ Updating $service_name..."
-        cd "$APPS_DIR/$service_name"
-        git fetch origin main
-        git reset --hard origin/main
-        git clean -fd
-        cd "$INFRA_DIR"
-    fi
-done
-
-# --- 3. Build and Start ---
-BUILD_CMD="docker compose build"
-if [ "$FROM_CLEAN" = true ]; then
-    echo "→ Forcing clean rebuild..."
-    BUILD_CMD+=" --no-cache"
-fi
-
+# --- 2. Pull and start ---
 if [[ "$SERVICE" == "all" ]]; then
-    echo "→ Building and starting all services..."
-    $BUILD_CMD
+    echo "→ Pulling and starting all services..."
+    docker compose pull
     docker compose up -d
 else
-    echo "→ Building and starting $SERVICE..."
-    $BUILD_CMD "$SERVICE"
+    echo "→ Pulling and starting $SERVICE..."
+    docker compose pull "$SERVICE"
     docker compose up -d "$SERVICE"
 fi
 
-# --- 4. Cleanup ---
+# --- 3. Cleanup ---
 echo "→ Cleaning up dangling images..."
 docker image prune -f
 
