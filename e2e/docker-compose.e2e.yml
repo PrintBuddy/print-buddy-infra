@@ -54,6 +54,12 @@ services:
       PWD_RESET_URL: http://localhost:8080/password-reset
       PWD_RESET_TIME_MIN: 30
       TELEGRAM_SECRET: e2e-test-telegram-secret
+      # Every request in this stack reaches the backend from the same
+      # source address (Playwright's browser -> published port on the CI
+      # runner), so the production 5/minute login limit trips within
+      # seconds once more than one spec logs in. Raised here only — the
+      # backend's own default (core/config.py) stays at 5/minute.
+      LOGIN_RATE_LIMIT: 100/minute
       DB_SCHEME: postgresql+psycopg
       DB_HOSTNAME: postgres
       DB_USER: e2e

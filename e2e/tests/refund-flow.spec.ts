@@ -1,7 +1,10 @@
 import { test, expect } from '@playwright/test';
 import { login, readBalance, submitTestPrintJob, waitForJobCompleted, USER, ADMIN } from './helpers';
 
-const FILENAME = 'e2e-refund-flow.png';
+// Unique per run so re-executing this spec against a stack that wasn't
+// torn down (e.g. manual local reruns) doesn't produce ambiguous
+// duplicate-row matches later in this test.
+const FILENAME = `e2e-refund-flow-${Date.now()}.png`;
 
 test('a completed job can be refunded and the balance is restored', async ({ browser }) => {
     // Two separate sessions — the regular user requests the refund, the
@@ -27,7 +30,7 @@ test('a completed job can be refunded and the balance is restored', async ({ bro
     // Admin approves it
     await login(adminPage, ADMIN);
     await adminPage.goto('/admin/refunds');
-    const refundRow = adminPage.locator('tr', { hasText: USER.username });
+    const refundRow = adminPage.locator('tr', { hasText: FILENAME });
     await refundRow.getByRole('button', { name: 'Resolve request' }).click();
     await adminPage.getByRole('button', { name: 'Approve' }).click();
     await expect(adminPage.getByRole('button', { name: 'Approve' })).not.toBeVisible();

@@ -54,9 +54,27 @@ export async function submitTestPrintJob(page: Page, filename: string) {
 // Polls the History page until the given job's row shows COMPLETED —
 // backend's jobs_updater scheduler job syncs CUPS job status every few
 // seconds, so completion isn't instant with the print submission itself.
-export async function waitForJobCompleted(page: Page, filename: string, timeoutMs = 30000) {
-    await page.goto('/history');
+//
+// The jobs list is fetched via react-query with a 5-minute staleTime and no
+// refetchInterval (PrintContext.jsx), so it never refreshes on its own once
+// mounted — a single page load + a long passive `expect(...).toContainText`
+// wait just keeps re-checking the same stale DOM snapshot forever (verified
+// live: the job had actually reached COMPLETED in the DB within seconds,
+// but the page still showed PENDING 90s later). Force a fresh fetch every
+// poll tick by reloading the page itself, not just re-reading its DOM.
+export async function waitForJobCompleted(page: Page, filename: string, timeoutMs = 90000) {
     const row = page.locator('tr', { hasText: filename });
-    await expect(row).toContainText('COMPLETED', { timeout: timeoutMs });
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+        await page.goto('/history');
+        if ((await row.count()) > 0) {
+            const text = await row.textContent();
+            if (text?.includes('COMPLETED')) {
+                return row;
+            }
+        }
+        await page.waitForTimeout(3000);
+    }
+    await expect(row).toContainText('COMPLETED', { timeout: 0 });
     return row;
 }

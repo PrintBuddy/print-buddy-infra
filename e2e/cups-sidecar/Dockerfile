@@ -14,13 +14,28 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Listen on the network — default CUPS only binds localhost/socket, but
 # the backend container needs to reach this one over the compose network.
-# This is a throwaway, network-isolated CI sidecar with no auth, never
-# exposed beyond that network.
+# ServerAlias * is required too: modern CUPS rejects requests whose HTTP
+# Host header isn't a recognized alias (DNS-rebinding protection), and the
+# backend reaches this container via its Docker Compose service name
+# ("cups-sidecar"), not "localhost". The two `Order allow,deny` lines
+# below are exactly (and only) the top-level `<Location />`/`<Location
+# /admin>` blocks — everything else in the stock config uses `Order
+# deny,allow`, so this precisely targets those two without duplicating
+# blocks. This is a throwaway, network-isolated CI sidecar with no auth,
+# never exposed beyond the compose network.
 RUN sed -i \
-        -e 's/^Listen localhost:631/Port 631/' \
+        -e 's/^Listen localhost:631/Port 631\nServerAlias */' \
         -e 's/^Browsing .*/Browsing Off/' \
-        /etc/cups/cupsd.conf \
-    && printf '<Location />\n  Order allow,deny\n  Allow all\n</Location>\n<Location /admin>\n  Order allow,deny\n  Allow all\n</Location>\n' >> /etc/cups/cupsd.conf
+        -e '/Order allow,deny/a\  Allow all' \
+        /etc/cups/cupsd.conf
+
+# cups-pdf's default `Out ${HOME}/PDF` resolves the submitting job's
+# owner (here, the backend container's "appuser") to a home directory on
+# *this* container's own system — which doesn't have that user, so
+# ${HOME} resolution fails and jobs never leave PENDING. Fixed output
+# path sidesteps needing the submitting user to exist here at all.
+RUN mkdir -p /tmp/cups-pdf && chmod 1777 /tmp/cups-pdf \
+    && sed -i 's|^Out .*|Out /tmp/cups-pdf|' /etc/cups/cups-pdf.conf
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

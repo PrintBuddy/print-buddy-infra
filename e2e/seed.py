@@ -24,8 +24,10 @@ BASE_URL = "http://localhost:8000/api"
 COMPOSE_FILE = "docker-compose.e2e.yml"
 
 USERS = [
-    {"username": "e2e_user", "name": "E2E", "surname": "User", "pwd": "E2ePassword123!"},
-    {"username": "e2e_admin", "name": "E2E", "surname": "Admin", "pwd": "E2ePassword123!"},
+    {"username": "e2e_user", "name": "E2E", "surname": "User", "pwd": "E2ePassword123!",
+     "email": "e2e_user@example.com"},
+    {"username": "e2e_admin", "name": "E2E", "surname": "Admin", "pwd": "E2ePassword123!",
+     "email": "e2e_admin@example.com"},
 ]
 
 
@@ -60,12 +62,21 @@ def wait_for_health(timeout=90):
 
 
 def register_users():
+    # NOTE: an email is required here even though UserCreate.email is
+    # Optional — backend's /auth/register (api/routes/auth.py) does
+    # `email_exists = user_service.email_exists(email, session) if email
+    # else True`, which unconditionally treats a missing email as
+    # "already exists" and 409s. Discovered via this seed script actually
+    # failing registration against a demonstrably empty user table —
+    # flagged as a real (if minor) backend bug, not fixed here (out of
+    # scope for the E2E suite itself).
     for user in USERS:
         status, body = http_json("POST", "/auth/register", {
             "username": user["username"],
             "name": user["name"],
             "surname": user["surname"],
             "pwd": user["pwd"],
+            "email": user["email"],
         })
         if status not in (200, 201, 409):
             print(f"Failed to register {user['username']}: {status} {body}", file=sys.stderr)
