@@ -85,8 +85,12 @@ def register_users():
 
 
 def elevate_and_fund_users():
+    # `is_admin` used to be a real column; the "Ledger and role overhaul"
+    # migration (backend PR merged 2026-07-19) replaced it with a `role`
+    # enum ('USER'/'ADMIN'/'SUPER_ADMIN') and turned is_admin into a
+    # derived Python property, not a stored column.
     sql = (
-        "UPDATE \"user\" SET is_admin = true, balance = 100, credit_limit = 0 "
+        "UPDATE \"user\" SET role = 'ADMIN'::userrole, balance = 100, credit_limit = 0 "
         "WHERE username = 'e2e_admin'; "
         "UPDATE \"user\" SET balance = 100, credit_limit = 0 "
         "WHERE username = 'e2e_user';"
