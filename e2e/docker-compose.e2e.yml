@@ -77,11 +77,15 @@ services:
       cups-sidecar:
         condition: service_started
     healthcheck:
+      # start_period + retries*interval needs headroom for `alembic upgrade
+      # head` (runs serially before uvicorn starts, in docker-entrypoint.sh)
+      # against a fresh, empty database — 33 migrations and growing, so this
+      # is sized generously rather than tuned to today's exact runtime.
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 5s
       timeout: 5s
-      retries: 20
-      start_period: 10s
+      retries: 40
+      start_period: 15s
 
   frontend:
     image: ${FRONTEND_IMAGE}
