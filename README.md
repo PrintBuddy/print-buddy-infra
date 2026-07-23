@@ -65,6 +65,10 @@ The `Deploy` workflow needs a self-hosted GitHub Actions runner registered again
 - The 3 GHCR packages (`print-buddy-backend`, `print-bot`, `print-buddy-frontend`) need to be set to **public** visibility (Package settings → Change visibility) so the VM's runner can pull them without needing a registry login/PAT.
 - The frontend repo needs 3 repository variables set (Settings → Secrets and variables → Actions → Variables), since Vite bakes these in at CI build time: `VITE_API_BASE_URL`, `VITE_CONTACT_NAME`, `VITE_CONTACT_NUMBER`.
 
+## Uploaded print files persistence
+
+The backend's `/app/uploads` directory is bind-mounted to a host path (`UPLOADS_HOST` in `.env`, default `/home/printowner/print-buddy-uploads`) so uploaded print files survive container recreates/redeploys. Before this was added, uploads lived only in the backend container's writable layer and were silently lost on every redeploy — a real gap discovered and fixed 2026-07-23. The host directory must exist and be writable by uid:gid `1000:1000` (the backend image's `appuser`) before starting the stack: `mkdir -p /home/printowner/print-buddy-uploads`. Like `~/deploy-secrets/`, this must live outside the deploy workspace, since that gets wiped (`git clean -ffdx`) on every scheduled `Deploy` run.
+
 ## Why Postgres isn't in this file
 
 The database is a pre-existing, already-running container with real production data and its own volume. Recreating it from this compose file would risk that data on every `docker compose up`. Instead this stack only defines `backend`/`bot`/`frontend` and joins Postgres's network externally — see the comment in `docker-compose.yml`.
