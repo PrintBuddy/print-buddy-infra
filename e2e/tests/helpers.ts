@@ -17,6 +17,19 @@ export async function login(page: Page, creds: { username: string; password: str
     await page.getByLabel('Password').fill(creds.password);
     await page.getByRole('button', { name: 'Submit' }).click();
     await expect(page).toHaveURL('/');
+    await dismissTutorialIfPresent(page);
+}
+
+// Fresh accounts (every e2e run reseeds the DB) see the first-time
+// onboarding tutorial automatically on first login — its modal backdrop
+// intercepts clicks on the page underneath, so dismiss it before a spec
+// tries to interact with anything. A no-op once the account has already
+// seen it (e.g. a second login as the same user later in the same run).
+async function dismissTutorialIfPresent(page: Page) {
+    const closeButton = page.getByRole('button', { name: 'Close tutorial' });
+    if (await closeButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await closeButton.click();
+    }
 }
 
 export async function readBalance(page: Page): Promise<number> {
