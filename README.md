@@ -37,6 +37,21 @@ To force an immediate deploy instead of waiting for the schedule:
 - From GitHub: Actions tab → `Deploy` workflow (in this repo) → **Run workflow**.
 - From the VM directly: `./deploy.sh`
 
+## Cross-repo features (backend + frontend touched together)
+
+Each app repo's `e2e` job builds its own image fresh from the PR under test,
+but the *other* two repos' images are built from their current `main` (see
+each repo's `ci.yml`) — there's no way to test "this frontend PR" against
+"that unmerged backend PR" without a monorepo or coordinated branches.
+
+**When one feature spans both backend and frontend: merge backend first.**
+Only after that merge lands can the frontend PR's `e2e` job actually exercise
+the new backend behavior — before that, it's still testing against whatever
+backend `main` currently is, which won't have the new endpoints/columns yet
+and will fail in confusing ways (missing routes, missing DB columns/enums)
+that look unrelated to the frontend change itself. Bot PRs have no `e2e` job
+and aren't affected by this.
+
 ```
 Usage: ./deploy.sh [OPTIONS]
 
