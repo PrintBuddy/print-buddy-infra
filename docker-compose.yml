@@ -8,6 +8,7 @@ services:
       - "${BACKEND_PORT}:8000"
     volumes:
       - "${CUPS_HOST}:${CUPS_HOST}"
+      - "${UPLOADS_HOST}:/app/uploads"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
