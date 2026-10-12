@@ -1,9 +1,8 @@
 #!/bin/bash
 #
-# Manual/emergency deploy — the normal path is the "Deploy" GitHub Actions
-# workflow running automatically on the self-hosted runner every 5 minutes.
-# Use this script when you want to force a deploy right now without
-# waiting for the schedule, or if GitHub Actions itself is unreachable.
+# Manual deploy — the normal path is auto-deploy.sh, run hourly by cron on
+# the VM. Use this script when you want to force a deploy right now without
+# waiting for the next cron tick, or to deploy a single service.
 
 set -euo pipefail
 

@@ -1,3 +1,7 @@
+# Pinned so the project (and thus which containers this file manages) never
+# depends on what directory the repo happens to be cloned into on the VM.
+name: print-buddy-infra
+
 services:
   backend:
     image: ghcr.io/printbuddy/print-buddy-backend:${BACKEND_TAG:-latest}
