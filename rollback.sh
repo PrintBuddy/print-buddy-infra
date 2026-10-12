@@ -7,7 +7,7 @@
 # Usage: ./rollback.sh backend a1b2c3d
 #
 # This does NOT touch .env permanently — it's a one-shot override for this
-# invocation only. To make a rollback stick across the next scheduled
+# invocation only. To make a rollback stick across the next cron
 # deploy tick, add e.g. BACKEND_TAG=a1b2c3d to .env directly (and remove it
 # again once you're ready to track :latest again).
 
@@ -34,5 +34,5 @@ cd "$INFRA_DIR"
 echo "→ Rolling $SERVICE back to $SHA..."
 env "$VAR=$SHA" docker compose pull "$SERVICE"
 env "$VAR=$SHA" docker compose up -d "$SERVICE"
-echo "→ Done. This is a one-shot override — the next scheduled deploy will"
+echo "→ Done. This is a one-shot override — the next cron deploy will"
 echo "  pull :latest again unless you add $VAR=$SHA to .env."
